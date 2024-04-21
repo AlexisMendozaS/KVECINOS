@@ -455,6 +455,24 @@ public class KNNApp {
         g.drawLine(0, panelHeight, 0, 0); // Eje Y (desde la parte inferior hasta arriba)
         g.drawLine(0, panelHeight, panelWidth, panelHeight); // Eje X (desde la parte izquierda hacia la derecha)
 
+        // Añadir marcas y etiquetas a los ejes
+        int intervalo = 5; // Intervalo para las marcas (ajustar según prefieras)
+        g.setColor(Color.GRAY); // Color para las marcas
+
+        // Dibujar marcas y etiquetas en el eje X
+        for (int x = 0; x <= panelWidth; x += intervalo * factorEscala) {
+            int xValor = (int) (x / factorEscala);
+            g.drawLine(x, panelHeight, x, panelHeight - 5);
+            g.drawString(String.valueOf(xValor), x, panelHeight - 10);
+        }
+
+        // Dibujar marcas y etiquetas en el eje Y
+        for (int y = 0; y <= panelHeight; y += intervalo * factorEscala) {
+            int yValor = (int) (y / factorEscala);
+            g.drawLine(0, panelHeight - y, 5, panelHeight - y);
+            g.drawString(String.valueOf(yValor), 10, panelHeight - y);
+        }
+
         // Graficar los objetos de las tablas de clases
         for (JTable classTable : tablasClases) {
             // Iterar sobre las filas de la tabla de clase
@@ -481,6 +499,7 @@ public class KNNApp {
             }
         }
     }
+
 
     // Método auxiliar para obtener el color de una clase
     private Color obtenerColorDeClase(String clase) {
