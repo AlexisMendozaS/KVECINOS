@@ -131,7 +131,7 @@ public class KNNApp {
         int numNuevosObjetos = obtenerNumeroDeObjetosNuevos();
 
         // Crear tabla para los objetos nuevos
-        String[] columnNames = {"X", "Y", "Etiqueta"};
+        String[] columnNames = {"Etiqueta", "X", "Y", "Clase"};
         Object[][] data = new Object[numNuevosObjetos][columnNames.length]; // Datos vacíos para empezar
         newTable = new JTable(data, columnNames);
 
@@ -211,9 +211,9 @@ public class KNNApp {
             int contador = 1;
 
             // Extraer características y etiqueta del objeto nuevo
-            Object xNuevoObj = newTable.getValueAt(i, 0);
-            Object yNuevoObj = newTable.getValueAt(i, 1);
-            Object etiquetaNuevoObj = newTable.getValueAt(i, 2);
+            Object xNuevoObj = newTable.getValueAt(i, 1);
+            Object yNuevoObj = newTable.getValueAt(i, 2);
+            Object etiquetaNuevoObj = newTable.getValueAt(i, 0);
 
             // Convertir las características a Double
             double xNuevo;
@@ -295,8 +295,6 @@ public class KNNApp {
         mostrarDatosDeClases();
     }
 
-
-
     private void asignarClase(List<Resultado> resultados, int k, int filaObjetoNuevo) {
         // Crear un mapa para contar las ocurrencias de cada clase
         Map<String, Integer> contadorClases = new HashMap<>();
@@ -321,27 +319,28 @@ public class KNNApp {
             }
         }
 
-        // Asignar la clase predominante al objeto nuevo en la tabla newTable
-        newTable.setValueAt(clasePredominante, filaObjetoNuevo, 2); // Columna 2 es la columna de clase
+        // Asignar la clase predominante a la nueva columna de clase en newTable
+        newTable.setValueAt(clasePredominante, filaObjetoNuevo, 3); // Columna 3 es la nueva columna de clase
 
         // Imprimir la clase asignada al objeto nuevo
         System.out.println("\nObjeto nuevo " + (filaObjetoNuevo + 1) + " clasificado como: " + clasePredominante);
     }
 
 
-    private void asignarClaseANuevosObjetos(String claseAsignada) {
-        // Asigna la clase predominante a cada objeto nuevo
-        for (int i = 0; i < newTable.getRowCount(); i++) {
-            newTable.setValueAt(claseAsignada, i, 2); // Columna 2 es la columna de etiquetas
-        }
+    private void asignarClaseANuevosObjetos(String clasePredominante, int filaObjetoNuevo) {
+        // Asigna la clase predominante al nuevo objeto en la tabla newTable
+        newTable.setValueAt(clasePredominante, filaObjetoNuevo, 2); // Columna 2 es la columna de clase
 
-        // Mostrar los datos de clases en una nueva ventana
-        mostrarDatosDeClases();
+        // En lugar de cambiar la etiqueta, solo imprime el objeto clasificado
+        System.out.println("\nObjeto nuevo " + (filaObjetoNuevo + 1) + " clasificado como: " + clasePredominante);
     }
 
     private void mostrarDatosDeClases() {
         // Crear un mapa para agrupar objetos por clase
         Map<String, List<Object[]>> clases = new HashMap<>();
+
+        // Lista para guardar las referencias a las tablas de cada clase
+        List<JTable> tablasClases = new ArrayList<>();
 
         // Agregar objetos de las tablas de entrenamiento a las clases correspondientes
         for (int j = 0; j < classTables.size(); j++) {
@@ -349,25 +348,29 @@ public class KNNApp {
             String nombreClase = "Clase " + (j + 1);
 
             for (int m = 0; m < classTable.getRowCount(); m++) {
-                Object[] fila = new Object[3];
-                fila[0] = classTable.getValueAt(m, 0);
-                fila[1] = classTable.getValueAt(m, 1);
-                fila[2] = nombreClase; // Asignar la clase original
+                // Crear una fila con la etiqueta original, coordenadas X e Y, y la clase
+                Object[] fila = new Object[4];
+                fila[0] = classTable.getValueAt(m, 2); // Etiqueta original
+                fila[1] = classTable.getValueAt(m, 0); // Coordenada X
+                fila[2] = classTable.getValueAt(m, 1); // Coordenada Y
+                fila[3] = nombreClase; // Clase asignada (nombre de la clase)
 
+                // Agregar la fila a la clase correspondiente
                 clases.computeIfAbsent(nombreClase, k -> new ArrayList<>()).add(fila);
             }
         }
 
         // Agregar objetos nuevos clasificados a las clases correspondientes
         for (int i = 0; i < newTable.getRowCount(); i++) {
-            Object[] fila = new Object[3];
-            fila[0] = newTable.getValueAt(i, 0);
-            fila[1] = newTable.getValueAt(i, 1);
-            // Usar la clase asignada (columna 2) para la nueva tabla
-            String claseAsignada = (String) newTable.getValueAt(i, 2);
-            fila[2] = claseAsignada;
+            // Crear una fila con la etiqueta original, coordenadas X e Y, y la clase asignada
+            Object[] fila = new Object[4];
+            fila[0] = newTable.getValueAt(i, 0); // Etiqueta original
+            fila[1] = newTable.getValueAt(i, 1); // Coordenada X
+            fila[2] = newTable.getValueAt(i, 2); // Coordenada Y
+            fila[3] = newTable.getValueAt(i, 3); // Clase asignada (columna 3)
 
-            // Agregar el objeto nuevo a la clase correspondiente
+            // Agregar la fila a la clase correspondiente
+            String claseAsignada = newTable.getValueAt(i, 3).toString(); // Clase asignada
             clases.computeIfAbsent(claseAsignada, k -> new ArrayList<>()).add(fila);
         }
 
@@ -377,7 +380,7 @@ public class KNNApp {
         frameClases.setSize(600, 400);
         frameClases.setLayout(new BorderLayout());
 
-        // Crear un panel con GridLayout para contener las tablas y el botón
+        // Crear un panel principal para contener las tablas y el botón
         JPanel mainPanel = new JPanel(new BorderLayout());
         JPanel tablesPanel = new JPanel(new GridLayout(clases.size(), 1));
         mainPanel.add(tablesPanel, BorderLayout.CENTER);
@@ -388,8 +391,11 @@ public class KNNApp {
             List<Object[]> objetos = entry.getValue();
 
             // Crear la tabla para la clase
-            String[] columnNames = {"X", "Y", "Clase"};
+            String[] columnNames = {"Etiqueta", "X", "Y", "Clase"};
             JTable classTable = new JTable(objetos.toArray(new Object[0][0]), columnNames);
+
+            // Agregar la tabla a la lista de tablas para su uso en el botón de graficar
+            tablasClases.add(classTable);
 
             // Crear un panel con título para la tabla
             JPanel classPanel = new JPanel(new BorderLayout());
@@ -402,7 +408,7 @@ public class KNNApp {
 
         // Añadir botón para abrir la ventana de gráficos
         JButton botonGraficar = new JButton("Graficar Objetos");
-        botonGraficar.addActionListener(e -> graficarObjetos());
+        botonGraficar.addActionListener(e -> graficarObjetos(tablasClases));
         mainPanel.add(botonGraficar, BorderLayout.SOUTH);
 
         // Añadir el panel principal a la ventana
@@ -412,7 +418,80 @@ public class KNNApp {
         frameClases.setVisible(true);
     }
 
+    private void graficarObjetos(List<JTable> tablasClases) {
+        // Crear una nueva ventana para graficar los objetos
+        JFrame frameGrafico = new JFrame("Gráfico de objetos");
+        frameGrafico.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        frameGrafico.setSize(1000, 800);
+        frameGrafico.setLocationRelativeTo(null); // Centrar la ventana en la pantalla
 
+        // Crear un panel de gráficos personalizado
+        JPanel panelGrafico = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                // Llama al método graficar con los datos de las tablas
+                graficarConTablas(g, this, tablasClases);
+            }
+        };
+
+        // Añadir el panel de gráficos a la ventana
+        frameGrafico.add(panelGrafico);
+
+        // Mostrar la nueva ventana
+        frameGrafico.setVisible(true);
+    }
+
+    private void graficarConTablas(Graphics g, JPanel panel, List<JTable> tablasClases) {
+        // Obtener las dimensiones del panel de gráficos
+        int panelWidth = panel.getWidth();
+        int panelHeight = panel.getHeight();
+
+        // Definir un factor de escala para ajustar el tamaño de los gráficos
+        double factorEscala = 50.0; // Puedes ajustar este valor según lo necesites
+
+        // Dibujar ejes positivos
+        g.setColor(Color.BLACK);
+        g.drawLine(0, panelHeight, 0, 0); // Eje Y (desde la parte inferior hasta arriba)
+        g.drawLine(0, panelHeight, panelWidth, panelHeight); // Eje X (desde la parte izquierda hacia la derecha)
+
+        // Graficar los objetos de las tablas de clases
+        for (JTable classTable : tablasClases) {
+            // Iterar sobre las filas de la tabla de clase
+            for (int i = 0; i < classTable.getRowCount(); i++) {
+                // Obtener los datos de la fila
+                String etiqueta = classTable.getValueAt(i, 0).toString(); // Etiqueta
+                double x = Double.parseDouble(classTable.getValueAt(i, 1).toString()) * factorEscala;
+                double y = Double.parseDouble(classTable.getValueAt(i, 2).toString()) * factorEscala;
+
+                // Obtener el color asignado a la clase del objeto
+                String clase = classTable.getValueAt(i, 3).toString();
+                Color colorClase = obtenerColorDeClase(clase);
+                g.setColor(colorClase);
+
+                // Transformar coordenadas para centrarlas en el cuarto cuadrante del panel
+                int xTransformado = (int) x;
+                int yTransformado = (int) (panelHeight - y);
+
+                // Dibujar punto
+                g.fillOval(xTransformado - 3, yTransformado - 3, 6, 6);
+
+                // Etiquetar el objeto
+                g.drawString(etiqueta, xTransformado + 5, yTransformado);
+            }
+        }
+    }
+
+    // Método auxiliar para obtener el color de una clase
+    private Color obtenerColorDeClase(String clase) {
+        Map<String, Color> colores = new HashMap<>();
+        colores.put("Clase 1", Color.RED);
+        colores.put("Clase 2", Color.BLUE);
+        colores.put("Clase 3", Color.GREEN);
+        // Agrega más colores y clases según sea necesario
+
+        return colores.getOrDefault(clase, Color.BLACK);
+    }
 
     private int obtenerValorDeK() {
         int k = 1; // Valor por defecto en caso de que el usuario no introduzca un valor válido
@@ -492,9 +571,10 @@ public class KNNApp {
             g.setColor(colorClase);
 
             for (int m = 0; m < classTable.getRowCount(); m++) {
-                double x = Double.parseDouble(classTable.getValueAt(m, 0).toString()) * factorEscala;
-                double y = Double.parseDouble(classTable.getValueAt(m, 1).toString()) * factorEscala;
-                String etiqueta = classTable.getValueAt(m, 2).toString();
+                // Obtener los datos de la fila
+                String etiqueta = classTable.getValueAt(m, 0).toString(); // Etiqueta
+                double x = Double.parseDouble(classTable.getValueAt(m, 1).toString()) * factorEscala;
+                double y = Double.parseDouble(classTable.getValueAt(m, 2).toString()) * factorEscala;
 
                 // Transformar coordenadas para centrarlas en el cuarto cuadrante del panel
                 int xTransformado = (int) x;
@@ -510,12 +590,13 @@ public class KNNApp {
 
         // Graficar los objetos nuevos clasificados
         for (int i = 0; i < newTable.getRowCount(); i++) {
-            double x = Double.parseDouble(newTable.getValueAt(i, 0).toString()) * factorEscala;
-            double y = Double.parseDouble(newTable.getValueAt(i, 1).toString()) * factorEscala;
-            String etiqueta = newTable.getValueAt(i, 2).toString(); // Obtener la etiqueta original
+            // Obtener los datos de la fila
+            String etiqueta = newTable.getValueAt(i, 0).toString(); // Etiqueta
+            double x = Double.parseDouble(newTable.getValueAt(i, 1).toString()) * factorEscala;
+            double y = Double.parseDouble(newTable.getValueAt(i, 2).toString()) * factorEscala;
 
             // Obtener el color asignado a la clase del objeto
-            String clase = newTable.getValueAt(i, 2).toString();
+            String clase = newTable.getValueAt(i, 3).toString();
             Color colorClase = colores.getOrDefault(clase, Color.BLACK);
             g.setColor(colorClase);
 
@@ -530,8 +611,6 @@ public class KNNApp {
             g.drawString(etiqueta, xTransformado + 5, yTransformado);
         }
     }
-
-
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(KNNApp::new);
